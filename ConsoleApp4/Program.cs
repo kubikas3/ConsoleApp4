@@ -20,7 +20,7 @@ namespace ConsoleApp4
         static int wordCount = 0;
         static double wordPerMinute = 0;
         static Stopwatch sw = new Stopwatch();
-        static Timer timer = new Timer(1000)
+        static Timer infoUpdateTimer = new Timer(100)
         {
             AutoReset = true,
             Enabled = false
@@ -29,69 +29,81 @@ namespace ConsoleApp4
         private static void Main()
         {
             ConsoleColor defaultBg = Console.BackgroundColor;
+            
+            Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight);
+            Console.SetWindowSize(Console.WindowWidth, Console.WindowHeight); // bbz kazkodel cia taip reik idk
+
+            Console.Title = string.Empty;
             Console.CursorSize = 100;
+            Console.CursorVisible = true;
+
             Console.Write(text);
             Console.SetCursorPosition(0, 0);
-            timer.Elapsed += Timer_Elapsed;
+            infoUpdateTimer.Elapsed += Timer_Elapsed;
 
             ConsoleKeyInfo keyInfo;
             do
             {
                 keyInfo = Console.ReadKey(true);
 
-                if (keyInfo.Key != ConsoleKey.Backspace)
+                if (sw.Elapsed.TotalSeconds > 60)
                 {
-                    if (!timer.Enabled)
+                    break;
+                }
+
+                if (keyInfo.Key != ConsoleKey.Enter &&
+                    keyInfo.Key != ConsoleKey.Backspace &&
+                    keyInfo.Key != ConsoleKey.Tab)
+                {
+                    if (!infoUpdateTimer.Enabled)
                     {
-                        timer.Start();
+                        infoUpdateTimer.Start();
                         sw.Start();
                     }
 
-                    userInput += keyInfo.KeyChar;
-
-                    if (char.IsWhiteSpace(text[charIndex]))
+                    if ((char.IsWhiteSpace(text[charIndex]) && char.IsWhiteSpace(keyInfo.KeyChar)) ||
+                        (!char.IsWhiteSpace(text[charIndex]) && !char.IsWhiteSpace(keyInfo.KeyChar)))
                     {
-                        wordCount++;
-                    }
+                        userInput += keyInfo.KeyChar;
 
-                    if (userInput[charIndex].Equals(text[charIndex]))
-                    {
-                        if (char.IsWhiteSpace(userInput[charIndex]))
+                        if (char.IsWhiteSpace(text[charIndex]))
                         {
-                            Console.BackgroundColor = defaultBg;
+                            wordCount++;
+                        }
+
+                        if (userInput[charIndex].Equals(text[charIndex]))
+                        {
+                            if (char.IsWhiteSpace(userInput[charIndex]))
+                            {
+                                Console.BackgroundColor = defaultBg;
+                            }
+                            else
+                            {
+                                Console.BackgroundColor = ConsoleColor.Blue;
+                            }
                         }
                         else
                         {
-                            Console.BackgroundColor = ConsoleColor.Blue;
+                            Console.BackgroundColor = ConsoleColor.Red;
+                        }
+
+                        Console.Write(text[charIndex++]);
+                        Console.BackgroundColor = defaultBg;
+
+                        if (charIndex >= text.Length)
+                        {
+                            break;
                         }
                     }
-                    else
-                    {
-                        Console.BackgroundColor = ConsoleColor.Red;
-                    }
-
-                    Console.Write(text[charIndex++]);
-                    Console.BackgroundColor = defaultBg;
-
-                    if (charIndex >= text.Length)
-                    {
-                        break;
-                    }
                 }
-                else if (charIndex > 0)
+                else if (keyInfo.Key == ConsoleKey.Backspace && charIndex > 0)
                 {
-                    //if (Console.CursorLeft == 0)
-                    //{
-                    //    Console.CursorTop = (Console.CursorTop > 0) ? Console.CursorTop - 1 : 0;
-                    //}
-                    //else
-                    //{
-                    //    Console.CursorLeft--;
-                    //}
+                    MoveCursorBack();
 
                     userInput = userInput.Remove(userInput.Length - 1);
                     Console.BackgroundColor = defaultBg;
-                    Console.Write($"\b{text[--charIndex]}\b"); // cia sitas sudas vapshe kaip alien atrodo xdd
+                    Console.Write(text[--charIndex]); // cia sitas sudas vapshe kaip alien atrodo xdd
+                    MoveCursorBack();
 
                     if (char.IsWhiteSpace(text[charIndex]))
                     {
@@ -99,6 +111,33 @@ namespace ConsoleApp4
                     }
                 }
             } while (keyInfo.Key != ConsoleKey.Escape);
+
+            sw.Stop();
+            infoUpdateTimer.Stop();
+            Console.CursorVisible = false;
+            Console.SetCursorPosition(0, Console.BufferHeight - 1);
+            Console.Write("Press Escape to exit...");
+
+            do
+            {
+                keyInfo = Console.ReadKey(true);
+            } while (keyInfo.Key != ConsoleKey.Escape);
+        }
+
+        static void MoveCursorBack()
+        {
+            if (Console.CursorLeft == 0)
+            {
+                if (Console.CursorTop > 0)
+                {
+                    Console.CursorTop--;
+                    Console.CursorLeft = Console.BufferWidth - 1;
+                }
+            }
+            else
+            {
+                Console.CursorLeft--;
+            }
         }
 
         private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -120,7 +159,7 @@ namespace ConsoleApp4
 
             int accuracy = (userInput.Length > 0) ? (int)((double)correctChars / userInput.Length * 100) : 0;
             wordPerMinute = wordCount / sw.Elapsed.TotalMinutes;
-            Console.Title = $"Time: {60 - sw.Elapsed.Seconds} min; Speed: {wordPerMinute} WPM; Accuracy: {accuracy}%";
+            Console.Title = $"Time: {60 - (int)sw.Elapsed.TotalSeconds} min; Speed: {(int)wordPerMinute} WPM; Accuracy: {accuracy}%; Word count: {wordCount}";
         }
     }
 }
