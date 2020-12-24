@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -10,30 +11,28 @@ namespace ConsoleApp4
 {
     class Program
     {
-        static string text = "While typewriters are the definitive ancestor of all key-based text entry devices, " +
+        static readonly string text = "While typewriters are the definitive ancestor of all key-based text entry devices, " +
             "the computer keyboard as a device for electromechanical data entry and communication derives largely " +
             "from the utility of two devices: teleprinters (or teletypes) and keypunches. It was through such devices " +
             "that modern computer keyboards inherited their layouts.";
-
-        static string userInput = string.Empty;
-        static int charIndex = 0;
-        static int wordCount = 0;
-        static double wordPerMinute = 0;
-        static Stopwatch sw = new Stopwatch();
-        static Timer infoUpdateTimer = new Timer(100)
+        static readonly Stopwatch sw = new Stopwatch();
+        static readonly Timer infoUpdateTimer = new Timer(100)
         {
             AutoReset = true,
             Enabled = false
         };
 
-        private static void Main()
+        static string userInput = string.Empty;
+        static int charIndex = 0;
+        static int wordIndex = 0;
+        static double wordPerMinute = 0;
+
+        static void Main()
         {
-            ConsoleColor defaultBg = Console.BackgroundColor;
-            
             Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight);
             Console.SetWindowSize(Console.WindowWidth, Console.WindowHeight); // bbz kazkodel cia taip reik idk
 
-            Console.Title = string.Empty;
+            Console.Title = "Start typing...";
             Console.CursorSize = 100;
             Console.CursorVisible = true;
 
@@ -51,9 +50,8 @@ namespace ConsoleApp4
                     break;
                 }
 
-                if (keyInfo.Key != ConsoleKey.Enter &&
-                    keyInfo.Key != ConsoleKey.Backspace &&
-                    keyInfo.Key != ConsoleKey.Tab)
+                if ((char.IsLetter(keyInfo.KeyChar) || char.IsPunctuation(keyInfo.KeyChar)) &&
+                    (char.IsLetter(text[charIndex]) || char.IsPunctuation(text[charIndex])))
                 {
                     if (!infoUpdateTimer.Enabled)
                     {
@@ -61,55 +59,55 @@ namespace ConsoleApp4
                         sw.Start();
                     }
 
-                    if ((char.IsWhiteSpace(text[charIndex]) && char.IsWhiteSpace(keyInfo.KeyChar)) ||
-                        (!char.IsWhiteSpace(text[charIndex]) && !char.IsWhiteSpace(keyInfo.KeyChar)))
+                    userInput += keyInfo.KeyChar;
+
+                    if (keyInfo.KeyChar.Equals(text[charIndex]))
                     {
-                        userInput += keyInfo.KeyChar;
-
-                        if (char.IsWhiteSpace(text[charIndex]))
-                        {
-                            wordCount++;
-                        }
-
-                        if (userInput[charIndex].Equals(text[charIndex]))
-                        {
-                            if (char.IsWhiteSpace(userInput[charIndex]))
-                            {
-                                Console.BackgroundColor = defaultBg;
-                            }
-                            else
-                            {
-                                Console.BackgroundColor = ConsoleColor.Blue;
-                            }
-                        }
-                        else
-                        {
-                            Console.BackgroundColor = ConsoleColor.Red;
-                        }
-
-                        Console.Write(text[charIndex++]);
-                        Console.BackgroundColor = defaultBg;
-
-                        if (charIndex >= text.Length)
-                        {
-                            break;
-                        }
+                        Console.BackgroundColor = ConsoleColor.Blue;
                     }
+                    else
+                    {
+                        Console.BackgroundColor = ConsoleColor.Red;
+                    }
+
+                    Console.Write(text[charIndex++]);
+                    Console.ResetColor();
+
+                    if (charIndex >= text.Length)
+                    {
+                        break;
+                    }
+                }
+                else if (char.IsWhiteSpace(keyInfo.KeyChar) && charIndex > 0 && !char.IsWhiteSpace(text[charIndex - 1]))
+                {
+                    wordIndex++;
+                    Console.BackgroundColor = ConsoleColor.Red;
+
+                    while (!char.IsWhiteSpace(text[charIndex]))
+                    {
+                        userInput += ' ';
+                        Console.Write(text[charIndex++]);
+                    } 
+
+                    Console.ResetColor();
+                    userInput += ' ';
+                    Console.Write(text[charIndex++]);
                 }
                 else if (keyInfo.Key == ConsoleKey.Backspace && charIndex > 0)
                 {
-                    MoveCursorBack();
+                    SetCursorPositionInBuffer(--charIndex); // cia krc grizta atgal bsk trumpam
+                    Console.Write(text[charIndex]);
+                    SetCursorPositionInBuffer(charIndex);
+
+                    if (char.IsWhiteSpace(userInput[charIndex]) && !char.IsWhiteSpace(userInput[charIndex - 1]))
+                    {
+                        wordIndex--;
+                    }
 
                     userInput = userInput.Remove(userInput.Length - 1);
-                    Console.BackgroundColor = defaultBg;
-                    Console.Write(text[--charIndex]); // cia sitas sudas vapshe kaip alien atrodo xdd
-                    MoveCursorBack();
-
-                    if (char.IsWhiteSpace(text[charIndex]))
-                    {
-                        wordCount--;
-                    }
                 }
+
+                Console.Title = userInput;
             } while (keyInfo.Key != ConsoleKey.Escape);
 
             sw.Stop();
@@ -124,42 +122,32 @@ namespace ConsoleApp4
             } while (keyInfo.Key != ConsoleKey.Escape);
         }
 
-        static void MoveCursorBack()
+        static void SetCursorPositionInBuffer(int index)
         {
-            if (Console.CursorLeft == 0)
-            {
-                if (Console.CursorTop > 0)
-                {
-                    Console.CursorTop--;
-                    Console.CursorLeft = Console.BufferWidth - 1;
-                }
-            }
-            else
-            {
-                Console.CursorLeft--;
-            }
+            Console.CursorTop = index / Console.BufferWidth;
+            Console.CursorLeft = index % Console.BufferWidth;
         }
 
-        private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        static void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             if (sw.Elapsed.TotalSeconds > 60)
             {
                 sw.Stop();
             }
 
-            int correctChars = 0;
+            //int correctChars = 0;
 
-            for (int i = 0; i < userInput.Length; i++)
-            {
-                if (text[i].Equals(userInput[i]))
-                {
-                    correctChars++;
-                }
-            }
+            //for (int i = 0; i < userInput.Length; i++)
+            //{
+            //    if (text[i].Equals(userInput[i]))
+            //    {
+            //        correctChars++;
+            //    }
+            //}
 
-            int accuracy = (userInput.Length > 0) ? (int)((double)correctChars / userInput.Length * 100) : 0;
-            wordPerMinute = wordCount / sw.Elapsed.TotalMinutes;
-            Console.Title = $"Time: {60 - (int)sw.Elapsed.TotalSeconds} min; Speed: {(int)wordPerMinute} WPM; Accuracy: {accuracy}%; Word count: {wordCount}";
+            //int accuracy = (userInput.Length > 0) ? (int)((double)correctChars / userInput.Length * 100) : 0;
+            wordPerMinute = wordIndex / sw.Elapsed.TotalMinutes;
+            //Console.Title = $"Time: {60 - (int)sw.Elapsed.TotalSeconds} sec; Speed: {(int)wordPerMinute} WPM; Accuracy: 0%; Word count: {wordIndex}";
         }
     }
 }
