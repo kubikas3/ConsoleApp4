@@ -26,6 +26,7 @@ namespace ConsoleApp4
         static int charIndex = 0;
         static int wordIndex = 0;
         static double wordPerMinute = 0;
+        static double accuracy = 0;
 
         static void Main()
         {
@@ -95,9 +96,9 @@ namespace ConsoleApp4
                 }
                 else if (keyInfo.Key == ConsoleKey.Backspace && charIndex > 0)
                 {
-                    SetCursorPositionInBuffer(--charIndex); // cia krc grizta atgal bsk trumpam
-                    Console.Write(text[charIndex]);
-                    SetCursorPositionInBuffer(charIndex);
+                    SetCursorPositionInBuffer(--charIndex); // cia krc grizta atgal per viena char'a trumpam
+                    Console.Write(text[charIndex]); // cia iraso nauja char'a i ta vieta
+                    SetCursorPositionInBuffer(charIndex); // cia grazina cursoriu vel atgal nes ka tik irasem char'a tai reik grazint atgal duh
 
                     if (char.IsWhiteSpace(userInput[charIndex]) && !char.IsWhiteSpace(userInput[charIndex - 1]))
                     {
@@ -107,7 +108,6 @@ namespace ConsoleApp4
                     userInput = userInput.Remove(userInput.Length - 1);
                 }
 
-                Console.Title = userInput;
             } while (keyInfo.Key != ConsoleKey.Escape);
 
             sw.Stop();
@@ -135,19 +135,26 @@ namespace ConsoleApp4
                 sw.Stop();
             }
 
-            //int correctChars = 0;
+            string[] textWords = text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] userInputWords = userInput.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            //for (int i = 0; i < userInput.Length; i++)
-            //{
-            //    if (text[i].Equals(userInput[i]))
-            //    {
-            //        correctChars++;
-            //    }
-            //}
+            if (userInputWords.Length > 0)
+            {
+                double correctWords = 0;
 
-            //int accuracy = (userInput.Length > 0) ? (int)((double)correctChars / userInput.Length * 100) : 0;
+                for (int i = 0; i < userInputWords.Length; i++)
+                {
+                    if (userInputWords[i].Equals(textWords[i]))
+                    {
+                        correctWords++;
+                    }
+                }
+
+                accuracy = correctWords / userInputWords.Length * 100;
+            }
+            
             wordPerMinute = wordIndex / sw.Elapsed.TotalMinutes;
-            //Console.Title = $"Time: {60 - (int)sw.Elapsed.TotalSeconds} sec; Speed: {(int)wordPerMinute} WPM; Accuracy: 0%; Word count: {wordIndex}";
+            Console.Title = $"Time: {60 - (int)sw.Elapsed.TotalSeconds} sec; Speed: {(int)wordPerMinute} WPM; Accuracy: {accuracy: #0}%; Word count: {wordIndex}";
         }
     }
 }
